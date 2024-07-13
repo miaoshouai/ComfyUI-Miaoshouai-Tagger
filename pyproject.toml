@@ -1,0 +1,15 @@
+[project]
+name = "comfyUI-miaoshouai-tagger"
+description = "Nodes to use Florence2 VLM for image tagging and captioning"
+version = "1.0.0"
+license = "MIT"
+dependencies = ["transformers>=4.38.0"]
+
+[project.urls]
+Repository = "https://github.com/miaoshouai/ComfyUI-Miaoshouai-Tagger"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "miaoshouai"
+DisplayName = "ComfyUI-Miaoshouai-Tagger"
+Icon = ""

@@ -1,0 +1,50 @@
+# ComfyUI 的 MiaoshouAI Tagger
+
+MiaoshouAI Tagger 是一个基于微软 Florence-2 模型的高级图像标注工具，经过精细调优。该工具为您的项目提供高精度和上下文相关的图像标注。
+
+## 为什么需要另一个标注工具？
+尽管目前的标注工具如 WD14 表现相当不错，但它们常常会产生需要人工纠正的错误。MiaoshouAI/Florence-2-base-PromptGen 是基于微软最新的 Florence2 模型，并使用精心挑选的 Civitai 图像和标签进行训练。因此，其标注结果更加符合我们通常用于生成图像的提示，提高了准确性和相关性。
+
+## 为什么选择 ComfyUI？
+ComfyUI 已成为 Stable Diffusion 工作者中最受欢迎的基于节点的工具之一。它提供了各种节点和模型，例如 LLava 和 Ollama Vision 节点，用于生成图像打标并将其传递给文本编码器。然而，这些视觉模型并不是专门为提示和图像标注训练的。使用 MiaoshouAI Tagger，您可以看到明显的结果改进，如下所示。
+
+## 主要功能
+#### 高精度：
+基于精选的 Civitai 图像和清洗标签数据集进行微调，生成高度精确和上下文相关的标签。
+
+#### 基于节点的系统：
+利用 ComfyUI 的节点系统的强大功能，将标注节点连接起来，结合描述性打标和关键词标注以获得最佳效果。
+
+#### 多功能集成：
+可以与其他节点（如Prompt Text Encoder）结合，达到出色的自动图像处理效果。
+
+#### 增强的图像训练：
+通过使用先进的标注和描述方法，为图像训练打标提供最佳结果。
+
+## 安装
+将此存储库克隆到 `ComfyUI/custom_nodes` 文件夹中。
+
+安装 `requirements.txt` 中的依赖项，至少需要 transformers 版本 4.38.0：
+
+bash
+复制代码
+`pip install -r requirements.txt`
+或者，如果您使用便携版本（在 ComfyUI_windows_portable 文件夹中运行此命令）：
+
+bash
+复制代码
+`python_embeded\python.exe -m pip install -r ComfyUI\custom_nodes\ComfyUI-Miaoshouai-Tagger\requirements.txt`
+
+# 工作流
+单图像标注使用：
+![miaoshouai_tagger_single_node_workflow.png](examples/miaoshouai_tagger_single_node_workflow.png)
+
+结合简单的描述性打标和标签打标并保存到输出文件：
+![image](examples/miaoshouai_tagger_combined_workflow.png)
+
+（保存图像并拖动到 ComfyUI 中使用）
+
+## Huggingface 模型
+首次使用节点时，模型应自动下载。如果没有发生这种情况，您可以手动下载。
+[MiaoshouAI/Florence-2-base-PromptGen](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen)
+下载的模型将放置在 `ComfyUI/LLM` 文件夹下。
