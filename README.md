@@ -1,12 +1,14 @@
 # MiaoshouAI Tagger for ComfyUI
 
+[English](README.md) / [中文](README_CN.md)
+
 MiaoshouAI Tagger for ComfyUI is an advanced image captioning tool based on the Microsoft Florence-2 Model Fine-tuned to perfection. This tool offers highly accurate and contextually relevant image tagging for your projects.
 
 ## Why Another Tagger?
 While current taggers like WD14 perform reasonably well, they often produce errors that require manual correction. MiaoshouAI/Florence-2-base-PromptGen is fine-tuned on Microsoft's latest Florence2 model using a curated dataset from Civitai images and tags. This ensures that the tagging results are more aligned with the typical prompts used for generating images, enhancing accuracy and relevance.
 
 ## Why ComfyUI?
-ComfyUI has emerged as one of the most popular node-based tools for Stable Diffusion workers. It offers various nodes and models, such as LLava and Ollama Vision nodes, for generating image captions and passing them to text encoders. However, these vision models are not specifically trained for prompting and image tagging. By using MiaoshouAI Tagger, you can see a clear improvement in results, as demonstrated in the comparison below.
+ComfyUI has emerged as one of the most popular node-based tools for Stable Diffusion workers. It offers various nodes and models, such as LLava and Ollama Vision nodes, for generating image captions and passing them to text encoders. However, these vision models are not specifically trained for prompting and image tagging. By using MiaoshouAI Tagger, you can see a clear improvement in results.
 
 ## Key Features
 #### High Accuracy: 
