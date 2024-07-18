@@ -51,6 +51,10 @@ class Tagger:
                     "multiline": True,
                     "default": ""
                 }),
+                "replace_tags": ("STRING", {
+                    "multiline": True,
+                    "default": "replace_tags eg:search1:replace1;search2:replace2"
+                }),
             }
         }
 
@@ -87,19 +91,17 @@ class Tagger:
 
         return parsed_answer[prompt]
 
-    def start_tag(self, folder_path, caption_method, max_new_tokens, num_beams, images=None, filenames=None, captions=None, prefix_caption="", suffix_caption=""):
+    def start_tag(self, folder_path, caption_method, max_new_tokens, num_beams, images=None, filenames=None, captions=None, prefix_caption="", suffix_caption="", replace_tags=""):
         file_names = []
         tag_contents = []
         pil_images = []
         tensor_images = []
         attention = 'sdpa'
         precision = 'fp16'
-        batch_size = 0
 
         device = mm.get_torch_device()
         offload_device = mm.unet_offload_device()
         dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
-        print(f"using {attention} for attention")
 
         # Download model if it does not exist
         hg_model = 'MiaoshouAI/Florence-2-base-PromptGen'
@@ -162,25 +164,22 @@ class Tagger:
 
         for i, image in enumerate(pil_images):
             tags = self.tag_image(image, caption_method, model, processor, device, dtype, max_new_tokens, num_beams)
+            if "eg:" not in replace_tags and ":" in replace_tags:
+                if ";" not in replace_tags:
+                    replace_pairs = [replace_tags]
+                else:
+                    replace_pairs = replace_tags.split(";")
+                for pair in replace_pairs:
+                    search, replace = pair.split(":")
+                    tags = tags.replace(search, replace)
             tags = prefix_caption + tags + suffix_caption
             # when two tagger nodes and their captions are connected
             if captions is not None:
                 tags = captions + tags
 
-            print(i, caption_method, tags)
             tag_contents.append(tags)
 
             pbar.update(1)
-
-        # Print tensor image details for debugging
-        for i, img in enumerate(tensor_images):
-            print(f"Tensor image {i + 1} shape: {img.shape}")
-            if img.shape[0] == 3:
-                print("Color image")
-            elif img.shape[0] == 1:
-                print("Grayscale image")
-            else:
-                print("Unexpected number of channels")
 
         batch_size = len(tensor_images)
 
