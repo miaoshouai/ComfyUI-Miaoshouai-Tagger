@@ -126,7 +126,7 @@ class Tagger:
                 if filename.split(".")[-1] in image_types:
                     img_path = os.path.join(folder_path, filename)
                     cap_filename = '.'.join(filename.split('.')[:-1]) + '.txt'
-                    image = Image.open(img_path)
+                    image = Image.open(img_path).convert("RGB")
                     pil_images.append(image)
 
                     tensor_image = F.to_tensor(image)
