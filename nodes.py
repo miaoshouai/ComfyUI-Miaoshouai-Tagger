@@ -234,16 +234,16 @@ class FluxCLIPTextEncode:
             "guidance": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.1}),
         }}
 
-    RETURN_TYPES = ("CONDITIONING", "STRING", "STRING")
+    RETURN_TYPES = ("CONDITIONING", "CONDITIONING", "STRING", "STRING")
     FUNCTION = "encode"
 
     CATEGORY = "MiaoshouAI Tagger"
-    RETURN_NAMES = ("CONDITIONING", "t5xxl", "clip_l")
+    RETURN_NAMES = ("CONDITIONING", "EMPTY CONDITIONING", "t5xxl", "clip_l")
 
     def encode(self, clip, caption, guidance):
         t5xxl = caption.split('\n')[0].strip()
         if len(caption.split('\n')) > 1:
-            clip_l =   caption.split('\n')[-1].replace('\\','').replace('(','').strip()
+            clip_l =   caption.split('\n')[-1].replace('\\','').replace('(','').replace(')','').strip()
         else:
             clip_l = ""
         print(t5xxl)
@@ -252,10 +252,16 @@ class FluxCLIPTextEncode:
         tokens = clip.tokenize(clip_l)
         tokens["t5xxl"] = clip.tokenize(t5xxl)["t5xxl"]
 
+        empty_tokens = clip.tokenize("")
+        empty_tokens["t5xxl"] = clip.tokenize("")["t5xxl"]
+
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+        empty_output = clip.encode_from_tokens(empty_tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
+        empty_cond = empty_output.pop("cond")
         output["guidance"] = guidance
-        return ([[cond, output]], t5xxl, clip_l,)
+
+        return ([[cond, output]], [[empty_cond, empty_output]], t5xxl, clip_l,)
     """
         The node will always be re executed if any of the inputs change but
         this method can be used to force the node to execute again even when the inputs don't change.

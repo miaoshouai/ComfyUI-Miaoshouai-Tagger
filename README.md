@@ -48,4 +48,9 @@ Combine simple caption with tag caption and save to output files
 Model should be automatically downloaded the first time when you use the node. In any case that didn't happen, you can manually download it.
 [MiaoshouAI/Florence-2-base-PromptGen](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen)
 The downloaded model will be placed under`ComfyUI/LLM` folder
+If you want to use a new version of PromptGen, you can simply delete the model folder and relaunch the ComfyUI workflow. It will auto download the model for you.
+
+## Windows Tagger Program
+For anyone who wants to use PromptGen model outside comfyui to batch tag their images, you can use this tag tool created by TTPlant.
+His program uses my model and works in a Windows enviroment. Access to the [download link](https://github.com/TTPlanetPig/Florence_2_tagger).
 

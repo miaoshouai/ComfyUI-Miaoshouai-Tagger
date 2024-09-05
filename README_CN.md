@@ -53,3 +53,8 @@ bash
 首次使用节点时，模型应自动下载。如果没有发生这种情况，您可以手动下载。
 [MiaoshouAI/Florence-2-base-PromptGen](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen)
 下载的模型将放置在 `ComfyUI/LLM` 文件夹下。
+如果你想要更新PromptGen的最新版本，你可以在此文件中删除你原有的模型，然后重新运行工作流，新模型会自动下载。
+
+## Windows打标工具
+对于任何希望在 ComfyUI 之外使用 PromptGen 模型对其图像进行批量标记的人，可以使用汤团猪创建的这个标记工具。
+他的程序使用了我的模型，并支持在Windows环境中运行。获取[下载链接](https://github.com/TTPlanetPig/Florence_2_tagger)。
