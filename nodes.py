@@ -33,11 +33,11 @@ class Tagger:
                     "multiline": False,  # True if you want the field to look like the one on the ClipTextEncode node
                     "default": "Path to your image folder"
                 }),
-                "caption_method": (['tags', 'simple', 'detailed'], {
-                    "default": "tags"
+                "caption_method": (['tags', 'simple', 'structured', 'detailed', 'mixed'], {
+                    "default": "mixed"
                 }),
                 "max_new_tokens": ("INT", {"default": 1024, "min": 1, "max": 4096}),
-                "num_beams": ("INT", {"default": 3, "min": 1, "max": 64})
+                "num_beams": ("INT", {"default": 4, "min": 1, "max": 64})
             },
             "optional": {
                 "images": ("IMAGE",),
@@ -68,11 +68,15 @@ class Tagger:
     def tag_image(self, image, caption_method, model, processor, device, dtype, max_new_tokens, num_beams):
 
         if caption_method == 'tags':
-            prompt = "<GENERATE_PROMPT>"
+            prompt = "<GENERATE_TAGS>"
         elif caption_method == 'simple':
+            prompt = "<CAPTION>"
+        elif caption_method == 'structured':
             prompt = "<DETAILED_CAPTION>"
-        else:
+        elif caption_method == 'detailed':
             prompt = "<MORE_DETAILED_CAPTION>"
+        else:
+            prompt = "<MIX_CAPTION>"
 
         inputs = processor(text=prompt, images=image, return_tensors="pt", do_rescale=False).to(dtype).to(device)
         generated_ids = model.generate(
@@ -104,7 +108,7 @@ class Tagger:
         dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
 
         # Download model if it does not exist
-        hg_model = 'MiaoshouAI/Florence-2-base-PromptGen'
+        hg_model = 'MiaoshouAI/Florence-2-base-PromptGen-v1.5'
         model_name = hg_model.rsplit('/', 1)[-1]
         model_path = os.path.join(folder_paths.models_dir, "LLM", model_name)
         if not os.path.exists(model_path):
@@ -221,6 +225,37 @@ class SaveTags:
 
         return (captions,)
 
+class FluxCLIPTextEncode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "clip": ("CLIP",),
+            "caption": ("STRING", {"forceInput": True, "dynamicPrompts": True}),
+            "guidance": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.1}),
+        }}
+
+    RETURN_TYPES = ("CONDITIONING", "STRING", "STRING")
+    FUNCTION = "encode"
+
+    CATEGORY = "MiaoshouAI Tagger"
+    RETURN_NAMES = ("CONDITIONING", "t5xxl", "clip_l")
+
+    def encode(self, clip, caption, guidance):
+        t5xxl = caption.split('\n')[0].strip()
+        if len(caption.split('\n')) > 1:
+            clip_l =   caption.split('\n')[-1].replace('\\','').replace('(','').strip()
+        else:
+            clip_l = ""
+        print(t5xxl)
+        print(clip_l)
+        print(clip.tokenize(t5xxl))
+        tokens = clip.tokenize(clip_l)
+        tokens["t5xxl"] = clip.tokenize(t5xxl)["t5xxl"]
+
+        output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
+        cond = output.pop("cond")
+        output["guidance"] = guidance
+        return ([[cond, output]], t5xxl, clip_l,)
     """
         The node will always be re executed if any of the inputs change but
         this method can be used to force the node to execute again even when the inputs don't change.
@@ -241,11 +276,13 @@ class SaveTags:
 # NOTE: names should be globally unique
 NODE_CLASS_MAPPINGS = {
     "Miaoshouai_Tagger": Tagger,
-    "Miaoshouai_SaveTags": SaveTags
+    "Miaoshouai_SaveTags": SaveTags,
+    "Miaoshouai_Flux_CLIPTextEncode": FluxCLIPTextEncode
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Miaoshouai_Tagger": "🐾MiaoshouAI Tagger",
-    "Miaoshouai_SaveTags": "🐾MiaoshouAI Save Tags"
+    "Miaoshouai_SaveTags": "🐾MiaoshouAI Save Tags",
+    "Miaoshouai_Flux_CLIPTextEncode": "🐾MiaoshouAI Flux Clip Text Encode"
 }
