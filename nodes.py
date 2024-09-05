@@ -246,9 +246,7 @@ class FluxCLIPTextEncode:
             clip_l =   caption.split('\n')[-1].replace('\\','').replace('(','').replace(')','').strip()
         else:
             clip_l = ""
-        print(t5xxl)
-        print(clip_l)
-        print(clip.tokenize(t5xxl))
+
         tokens = clip.tokenize(clip_l)
         tokens["t5xxl"] = clip.tokenize(t5xxl)["t5xxl"]
 
