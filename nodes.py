@@ -16,7 +16,11 @@ def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
         return get_imports(filename)
     imports = get_imports(filename)
-    imports.remove("flash_attn")
+    try:
+        imports.remove("flash_attn")
+    except:
+        print(f"No flash_attn import to remove")
+        pass
     return imports
 
 
