@@ -10,7 +10,7 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 import comfy.model_management as mm
 from comfy.utils import ProgressBar
 import folder_paths
-
+import random
 
 def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
@@ -33,6 +33,9 @@ class Tagger:
     def INPUT_TYPES(s):
         return {
             "required": {
+                "model": (['promptgen_base_v1.5', 'promptgen_large_v1.5'], {
+                    "default": "promptgen_base_v1.5"
+                }),
                 "folder_path": ("STRING", {
                     "multiline": False,  # True if you want the field to look like the one on the ClipTextEncode node
                     "default": "Path to your image folder"
@@ -41,8 +44,11 @@ class Tagger:
                     "default": "mixed"
                 }),
                 "max_new_tokens": ("INT", {"default": 1024, "min": 1, "max": 4096}),
-                "num_beams": ("INT", {"default": 4, "min": 1, "max": 64})
-            },
+                "num_beams": ("INT", {"default": 4, "min": 1, "max": 64}),
+                "random_prompt": (['never', 'always'], {
+                    "default": "never"
+                })
+        },
             "optional": {
                 "images": ("IMAGE",),
                 "filenames": ("STRING", {"forceInput": True}),
@@ -99,7 +105,7 @@ class Tagger:
 
         return parsed_answer[prompt]
 
-    def start_tag(self, folder_path, caption_method, max_new_tokens, num_beams, images=None, filenames=None, captions=None, prefix_caption="", suffix_caption="", replace_tags=""):
+    def start_tag(self, model, folder_path, caption_method, max_new_tokens, num_beams, random_prompt, images=None, filenames=None, captions=None, prefix_caption="", suffix_caption="", replace_tags=""):
         file_names = []
         tag_contents = []
         pil_images = []
@@ -112,7 +118,10 @@ class Tagger:
         dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
 
         # Download model if it does not exist
+
         hg_model = 'MiaoshouAI/Florence-2-base-PromptGen-v1.5'
+        if model == 'promptgen_large_v1.5':
+            hg_model = 'MiaoshouAI/Florence-2-large-PromptGen-v1.5'
         model_name = hg_model.rsplit('/', 1)[-1]
         model_path = os.path.join(folder_paths.models_dir, "LLM", model_name)
         if not os.path.exists(model_path):
@@ -193,6 +202,20 @@ class Tagger:
 
         return (tensor_images, file_names, tag_contents, folder_path, batch_size,)
 
+    """
+        The node will always be re executed if any of the inputs change but
+        this method can be used to force the node to execute again even when the inputs don't change.
+        You can make this node return a number or a string. This value will be compared to the one returned the last time the node was
+        executed, if it is different the node will be executed again.
+        This method is used in the core repo for the LoadImage node where they return the image hash as a string, if the image hash
+        changes between executions the LoadImage node is executed again.
+    """
+    @classmethod
+    def IS_CHANGED(s, model, folder_path, caption_method, max_new_tokens, num_beams, random_prompt, images=None, filenames=None, captions=None, prefix_caption="", suffix_caption="", replace_tags=""):
+
+        if random_prompt == 'always':
+            return ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        return ''
 
 class SaveTags:
     def __init__(self):
@@ -264,17 +287,8 @@ class FluxCLIPTextEncode:
         output["guidance"] = guidance
 
         return ([[cond, output]], [[empty_cond, empty_output]], t5xxl, clip_l,)
-    """
-        The node will always be re executed if any of the inputs change but
-        this method can be used to force the node to execute again even when the inputs don't change.
-        You can make this node return a number or a string. This value will be compared to the one returned the last time the node was
-        executed, if it is different the node will be executed again.
-        This method is used in the core repo for the LoadImage node where they return the image hash as a string, if the image hash
-        changes between executions the LoadImage node is executed again.
-    """
-    # @classmethod
-    # def IS_CHANGED(s, image, string_field, int_field, float_field, print_to_screen):
-    #    return ""
+
+
 
 
 # Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension
