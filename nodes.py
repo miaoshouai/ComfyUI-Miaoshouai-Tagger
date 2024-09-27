@@ -1,4 +1,4 @@
-import os
+import os, sys
 from PIL import Image
 import torch
 from unittest.mock import patch
@@ -131,10 +131,27 @@ class Tagger:
                               local_dir=model_path,
                               local_dir_use_symlinks=False)
 
-        with patch("transformers.dynamic_module_utils.get_imports",
-                   fixed_get_imports):  # workaround for unnecessary flash_attn requirement
-            model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
-                                                         torch_dtype=dtype, trust_remote_code=True).to(device)
+        # Adjust the module path
+        sys.path.append(model_path)
+
+        # Import the Florence modules
+        from florence2_base_ft.modeling_florence2 import Florence2ForConditionalGeneration
+        from florence2_base_ft.configuration_florence2 import Florence2Config
+
+        # Load the model configuration
+        model_config = Florence2Config.from_pretrained(model_path)
+
+        # Load the model
+        with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
+            model = Florence2ForConditionalGeneration.from_pretrained(
+                model_path,
+                config=model_config,
+                attn_implementation=attention,
+                device_map=device,
+                torch_dtype=dtype
+            ).to(device)
+
+        # Load the processor
         processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
 
         if images is None:
