@@ -135,8 +135,12 @@ class Tagger:
         sys.path.append(model_path)
 
         # Import the Florence modules
-        from florence2_base_ft.modeling_florence2 import Florence2ForConditionalGeneration
-        from florence2_base_ft.configuration_florence2 import Florence2Config
+        if model == 'promptgen_large_v1.5':
+            from florence_2_large.modeling_florence2 import Florence2ForConditionalGeneration
+            from florence_2_large.configuration_florence2 import Florence2Config
+        else:
+            from florence2_base_ft.modeling_florence2 import Florence2ForConditionalGeneration
+            from florence2_base_ft.configuration_florence2 import Florence2Config
 
         # Load the model configuration
         model_config = Florence2Config.from_pretrained(model_path)

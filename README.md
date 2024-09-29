@@ -49,7 +49,7 @@ Combine simple caption with tag caption and save to output files
 ## Huggingface model
 Model should be automatically downloaded the first time when you use the node. In any case that didn't happen, you can manually download it.
 [MiaoshouAI/Florence-2-base-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v1.5)
-The downloaded model will be placed under`ComfyUI/LLM` folder
+The downloaded model will be placed under`ComfyUI/models/LLM` folder
 If you want to use a new version of PromptGen, you can simply delete the model folder and relaunch the ComfyUI workflow. It will auto download the model for you.
 
 ## Windows Tagger Program
