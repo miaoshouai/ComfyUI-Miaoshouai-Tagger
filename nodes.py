@@ -130,39 +130,11 @@ class Tagger:
             snapshot_download(repo_id=hg_model,
                               local_dir=model_path,
                               local_dir_use_symlinks=False)
-        try:
-            # get configuration from huggingface
-            print('Using remote configuration')
-            with patch("transformers.dynamic_module_utils.get_imports",
-                       fixed_get_imports):  # workaround for unnecessary flash_attn requirement
-                model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
-                                                             torch_dtype=dtype, trust_remote_code=True).to(device)
-        except Exception as e:
-            # for people without access to huggingface
-            # Adjust the module path
-            print(f'{e}\nUsing local configuration')
-            sys.path.append(model_path)
 
-            # Import the Florence modules
-            if model == 'promptgen_large_v1.5':
-                from florence2_large.modeling_florence2 import Florence2ForConditionalGeneration
-                from florence2_large.configuration_florence2 import Florence2Config
-            else:
-                from florence2_base_ft.modeling_florence2 import Florence2ForConditionalGeneration
-                from florence2_base_ft.configuration_florence2 import Florence2Config
-
-            # Load the model configuration
-            model_config = Florence2Config.from_pretrained(model_path)
-
-            # Load the model
-            with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
-                model = Florence2ForConditionalGeneration.from_pretrained(
-                    model_path,
-                    config=model_config,
-                    attn_implementation=attention,
-                    device_map=device,
-                    torch_dtype=dtype
-                ).to(device)
+        with patch("transformers.dynamic_module_utils.get_imports",
+                   fixed_get_imports):  # workaround for unnecessary flash_attn requirement
+            model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
+                                                         torch_dtype=dtype, trust_remote_code=True).to(device)
 
         # Load the processor
         processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
