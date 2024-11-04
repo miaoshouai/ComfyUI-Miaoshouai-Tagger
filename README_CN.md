@@ -5,6 +5,7 @@
 MiaoshouAI Tagger 是一个基于微软 Florence-2 模型的高级图像标注工具，经过精细调优。该工具为您的项目提供高精度和上下文相关的图像标注。
 
 ## 版本更新
+2024/09/28 v1.4 版本更新支持[Florence-2-base-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v2.0) 和 [Florence-2-large-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v2.0)</br>
 2024/09/28 v1.31 修复部分用户碰到的[模型配置文件缺失](https://github.com/miaoshouai/ComfyUI-Miaoshouai-Tagger/issues/15)问题, 更新节点之后，删除models\LLM文件夹下面的模型，重新运行工作流模型会自动下载。或者你也可以手动从 [度盘](https://pan.baidu.com/s/1h8kLNmukfcUitM7mKRE89w?pwd=4xwc) 文件夹下载模型.</br>
 2024/09/07 v1.2 更新支持 [Florence-2-large-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v1.5), 为Tagger节点增加了一个随机widget，如果选择Always，Tagger将在每一次运行生成一套新的提示词。<br>
 2024/09/05 v1.1 更新支持 [Florence-2-base-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v1.5)，新增了两种提示模式；新增了一个用于 flux clip 文本编码器的节点，以便更轻松地支持 flux 模型片段。

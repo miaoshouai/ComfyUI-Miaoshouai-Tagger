@@ -5,6 +5,7 @@
 MiaoshouAI Tagger for ComfyUI is an advanced image captioning tool based on the Microsoft Florence-2 Model Fine-tuned to perfection. This tool offers highly accurate and contextually relevant image tagging for your projects.
 
 ## Update Note
+2024/11/05 v1.4 A new release to support [Florence-2-base-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v2.0) and [Florence-2-large-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v2.0)</br>
 2024/09/28 v1.31 fix the configuration error rated to [this issue](https://github.com/miaoshouai/ComfyUI-Miaoshouai-Tagger/issues/15), try to delete your existing model from models\LLM folder and run again. It will automatically download the new configurations for you. Or you can download the model from the [baidu drive](https://pan.baidu.com/s/1h8kLNmukfcUitM7mKRE89w?pwd=4xwc) folder.</br>
 2024/09/07 v1.2 updated to support [Florence-2-large-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v1.5), a random prompt widget is added to Tagger node so that if you want to get a different prompt everytime, then just switch it to "always". <br>
 2024/09/05 v1.1 updated to support [Florence-2-base-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v1.5), 2 new prompt mode is added; a new node for flux clip text encoder is added to add easy support for flux model clips.

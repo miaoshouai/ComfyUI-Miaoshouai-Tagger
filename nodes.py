@@ -33,15 +33,15 @@ class Tagger:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "model": (['promptgen_base_v1.5', 'promptgen_large_v1.5'], {
-                    "default": "promptgen_base_v1.5"
+                "model": (['promptgen_base_v1.5', 'promptgen_large_v1.5', 'promptgen_base_v2.0', 'promptgen_large_v2.0'], {
+                    "default": "promptgen_base_v2.0"
                 }),
                 "folder_path": ("STRING", {
                     "multiline": False,  # True if you want the field to look like the one on the ClipTextEncode node
                     "default": "Path to your image folder"
                 }),
-                "caption_method": (['tags', 'simple', 'structured', 'detailed', 'mixed'], {
-                    "default": "mixed"
+                "caption_method": (['tags', 'simple', 'detailed', 'extra', 'extra_mixed', 'analyze'], {
+                    "default": "extra_mixed"
                 }),
                 "max_new_tokens": ("INT", {"default": 1024, "min": 1, "max": 4096}),
                 "num_beams": ("INT", {"default": 4, "min": 1, "max": 64}),
@@ -75,18 +75,20 @@ class Tagger:
     #OUTPUT_NODE = True
     CATEGORY = "MiaoshouAI Tagger"
 
-    def tag_image(self, image, caption_method, model, processor, device, dtype, max_new_tokens, num_beams):
+    def tag_image(self, image, caption_method, model, processor, device, dtype, max_new_tokens, do_sample, num_beams):
 
         if caption_method == 'tags':
             prompt = "<GENERATE_TAGS>"
         elif caption_method == 'simple':
             prompt = "<CAPTION>"
-        elif caption_method == 'structured':
-            prompt = "<DETAILED_CAPTION>"
         elif caption_method == 'detailed':
+            prompt = "<DETAILED_CAPTION>"
+        elif caption_method == 'extra':
             prompt = "<MORE_DETAILED_CAPTION>"
+        elif caption_method == 'extra_mixed':
+            prompt = "<MIX_CAPTION_PLUS>"
         else:
-            prompt = "<MIX_CAPTION>"
+            prompt = "<ANALYZE>"
 
         inputs = processor(text=prompt, images=image, return_tensors="pt", do_rescale=False).to(dtype).to(device)
         generated_ids = model.generate(
@@ -94,7 +96,7 @@ class Tagger:
             pixel_values=inputs["pixel_values"],
             max_new_tokens=max_new_tokens,
             early_stopping=False,
-            do_sample=False,
+            do_sample=do_sample,
             num_beams=num_beams,
         )
         generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
@@ -119,9 +121,9 @@ class Tagger:
 
         # Download model if it does not exist
 
-        hg_model = 'MiaoshouAI/Florence-2-base-PromptGen-v1.5'
-        if model == 'promptgen_large_v1.5':
-            hg_model = 'MiaoshouAI/Florence-2-large-PromptGen-v1.5'
+        hg_model = 'MiaoshouAI/Florence-2-base-PromptGen-v2.0'
+        if model == 'promptgen_large_v2.0':
+            hg_model = 'MiaoshouAI/Florence-2-large-PromptGen-v2.0'
         model_name = hg_model.rsplit('/', 1)[-1]
         model_path = os.path.join(folder_paths.models_dir, "LLM", model_name)
         if not os.path.exists(model_path):
@@ -181,8 +183,13 @@ class Tagger:
 
         pbar = ProgressBar(len(pil_images))
 
+        if random_prompt == 'always':
+            do_sample = True
+        else:
+            do_sample = False
+
         for i, image in enumerate(pil_images):
-            tags = self.tag_image(image, caption_method, model, processor, device, dtype, max_new_tokens, num_beams)
+            tags = self.tag_image(image, caption_method, model, processor, device, dtype, max_new_tokens, do_sample, num_beams)
             if "eg:" not in replace_tags and ":" in replace_tags:
                 if ";" not in replace_tags:
                     replace_pairs = [replace_tags]
@@ -255,6 +262,9 @@ class SaveTags:
         return (captions,)
 
 class FluxCLIPTextEncode:
+    def __init__(self):
+        pass
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -263,20 +273,31 @@ class FluxCLIPTextEncode:
             "guidance": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.1}),
         }}
 
-    RETURN_TYPES = ("CONDITIONING", "CONDITIONING", "STRING", "STRING")
+    RETURN_TYPES = ("CONDITIONING", "CONDITIONING", "STRING", "STRING", "STRING")
     FUNCTION = "encode"
 
     CATEGORY = "MiaoshouAI Tagger"
-    RETURN_NAMES = ("CONDITIONING", "EMPTY CONDITIONING", "t5xxl", "clip_l")
+    RETURN_NAMES = ("CONDITIONING", "EMPTY CONDITIONING", "t5xxl", "clip_l", "analyze")
 
     def encode(self, clip, caption, guidance):
-        t5xxl = caption.split('\n')[0].strip()
-        if len(caption.split('\n')) > 1:
-            clip_l =   caption.split('\n')[-1].replace('\\','').replace('(','').replace(')','').strip()
+        caption_segs = []
+
+        for caption_seg in caption.split('\n'):
+            if len(caption_seg) > 10:
+                caption_segs.append(caption_seg.strip())
+
+        t5xxl = caption_segs[0]
+        if len(caption_segs) > 1:
+            clip_l = caption_segs[1].replace('\\','').replace('(','').replace(')','').strip()
         else:
             clip_l = ""
 
-        tokens = clip.tokenize(clip_l)
+        if len(caption_segs) >= 2:
+            analyze = caption_segs[2].replace('\\','').replace('(','').replace(')','').strip()
+        else:
+            analyze = ""
+
+        tokens = clip.tokenize(f"{clip_l}\n\n{analyze}")
         tokens["t5xxl"] = clip.tokenize(t5xxl)["t5xxl"]
 
         empty_tokens = clip.tokenize("")
@@ -288,10 +309,68 @@ class FluxCLIPTextEncode:
         empty_cond = empty_output.pop("cond")
         output["guidance"] = guidance
 
-        return ([[cond, output]], [[empty_cond, empty_output]], t5xxl, clip_l,)
+        return ([[cond, output]], [[empty_cond, empty_output]], t5xxl, clip_l, analyze,)
 
 
+class CaptionAnalyzer:
+    def __init__(self):
+        pass
 
+    @classmethod
+    def INPUT_TYPES(s):
+        key_list = ["camera_angle", "art_style", "location", "text", "distance_to_camera", "background",
+                    "position_in_image", "gender", "age",
+                    "hair_style", "hair_color", "facial_expression", "eye_direction", "facing_direction", "race", "ear",
+                    "expression", "body", "accessory", "pants", "clothing", "shoes", "action"]
+        selection = {
+                        "analyze": ("STRING", {"forceInput": True, "dynamicPrompts": True}),
+                        "subject_index": ("INT", {"default": 0, "min": 0, "max": 2, "step": 1}),
+                     }
+        for key in key_list:
+            selection[key] = ("BOOLEAN", {"default": False})
+        return {
+            "required": selection
+        }
+
+    RETURN_TYPES = ("STRING", )
+    FUNCTION = "analyze"
+
+    CATEGORY = "MiaoshouAI Tagger"
+    RETURN_NAMES = ("selected analyze", )
+
+    def analyze(self, analyze, subject_index, **kwargs):
+        selected_analyze = []
+        analyze_dict = {}
+        previous_key = analyze.split(",")[0]
+
+        for item in analyze.split(","):
+            try:
+                print(item)
+                if ":" not in item:
+                    analyze_dict[previous_key.strip()] = f'{analyze_dict[previous_key.strip()]}, {item.strip()}'
+                else:
+                    key, value = item.split(":")
+                    analyze_dict[key.strip()] = value.strip()
+                    previous_key = key
+            except Exception as e:
+                print(e)
+                continue
+
+        # Iterate through kwargs and check if the flag is set to True1
+        print(analyze_dict)
+        print(kwargs.items())
+        for key, flag in kwargs.items():
+            if flag and key in analyze_dict:
+                if subject_index == 0 or len(analyze_dict[key].split(";")) < subject_index:
+                    analyze_result  = analyze_dict[key]
+                else:
+                    analyze_result = analyze_dict[key].split(";")[subject_index-1].strip()
+
+                selected_analyze.append(f"{key.replace('_', ' ')} is {analyze_result.replace('NA','unknown')}")
+            elif flag and not key in analyze_dict:
+                selected_analyze.append(f"{key.replace('_', ' ')} is unknown")
+
+        return (','.join(selected_analyze),)
 
 # Set the web directory, any .js file in that directory will be loaded by the frontend as a frontend extension
 # WEB_DIRECTORY = "./somejs"
@@ -301,12 +380,14 @@ class FluxCLIPTextEncode:
 NODE_CLASS_MAPPINGS = {
     "Miaoshouai_Tagger": Tagger,
     "Miaoshouai_SaveTags": SaveTags,
-    "Miaoshouai_Flux_CLIPTextEncode": FluxCLIPTextEncode
+    "Miaoshouai_Flux_CLIPTextEncode": FluxCLIPTextEncode,
+    "Miaoshouai_Caption_Analyzer": CaptionAnalyzer
 }
 
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Miaoshouai_Tagger": "🐾MiaoshouAI Tagger",
     "Miaoshouai_SaveTags": "🐾MiaoshouAI Save Tags",
-    "Miaoshouai_Flux_CLIPTextEncode": "🐾MiaoshouAI Flux Clip Text Encode"
+    "Miaoshouai_Flux_CLIPTextEncode": "🐾MiaoshouAI Flux Clip Text Encode",
+    "Miaoshouai_Caption_Analyzer": "🐾MiaoshouAI Caption Analyzer (Beta)"
 }
