@@ -40,7 +40,7 @@ class Tagger:
                     "multiline": False,  # True if you want the field to look like the one on the ClipTextEncode node
                     "default": "Path to your image folder"
                 }),
-                "caption_method": (['tags', 'simple', 'detailed', 'extra', 'extra_mixed', 'analyze'], {
+                "caption_method": (['tags', 'simple', 'detailed', 'extra', 'mixed', 'extra_mixed', 'analyze'], {
                     "default": "extra_mixed"
                 }),
                 "max_new_tokens": ("INT", {"default": 1024, "min": 1, "max": 4096}),
@@ -85,6 +85,8 @@ class Tagger:
             prompt = "<DETAILED_CAPTION>"
         elif caption_method == 'extra':
             prompt = "<MORE_DETAILED_CAPTION>"
+        elif caption_method == 'mixed':
+            prompt = "<MIX_CAPTION>"
         elif caption_method == 'extra_mixed':
             prompt = "<MIX_CAPTION_PLUS>"
         else:
@@ -292,7 +294,7 @@ class FluxCLIPTextEncode:
         else:
             clip_l = ""
 
-        if len(caption_segs) >= 2:
+        if len(caption_segs) > 2:
             analyze = caption_segs[2].replace('\\','').replace('(','').replace(')','').strip()
         else:
             analyze = ""
