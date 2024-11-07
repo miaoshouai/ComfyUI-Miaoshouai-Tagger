@@ -314,6 +314,60 @@ class FluxCLIPTextEncode:
         return ([[cond, output]], [[empty_cond, empty_output]], t5xxl, clip_l, analyze,)
 
 
+class SD3CLIPTextEncode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "clip": ("CLIP",),
+            "caption": ("STRING", {"forceInput": True, "dynamicPrompts": True}),
+            "empty_padding": (["none", "empty_prompt"], )
+        }}
+    RETURN_TYPES = ("CONDITIONING", "STRING", "STRING")
+    FUNCTION = "encode"
+
+    CATEGORY = "MiaoshouAI Tagger"
+    RETURN_NAMES = ("CONDITIONING", "t5xxl", "clip_l / clip_g")
+
+    def encode(self, clip, caption, empty_padding):
+        caption_segs = []
+
+        for caption_seg in caption.split('\n'):
+            if len(caption_seg) > 10:
+                caption_segs.append(caption_seg.strip())
+
+        t5xxl = caption_segs[0]
+        if len(caption_segs) > 1:
+            clip_l = caption_segs[1].replace('\\','').replace('(','').replace(')','').strip()
+        else:
+            clip_l = ""
+
+        clip_g = clip_l
+
+        no_padding = empty_padding == "none"
+
+        tokens = clip.tokenize(clip_g)
+        if len(clip_g) == 0 and no_padding:
+            tokens["g"] = []
+
+        if len(clip_l) == 0 and no_padding:
+            tokens["l"] = []
+        else:
+            tokens["l"] = clip.tokenize(clip_l)["l"]
+
+        if len(t5xxl) == 0 and no_padding:
+            tokens["t5xxl"] =  []
+        else:
+            tokens["t5xxl"] = clip.tokenize(t5xxl)["t5xxl"]
+        if len(tokens["l"]) != len(tokens["g"]):
+            empty = clip.tokenize("")
+            while len(tokens["l"]) < len(tokens["g"]):
+                tokens["l"] += empty["l"]
+            while len(tokens["l"]) > len(tokens["g"]):
+                tokens["g"] += empty["g"]
+        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+        return ([[cond, {"pooled_output": pooled}]], t5xxl, clip_l, )
+
+
 class CaptionAnalyzer:
     def __init__(self):
         pass
@@ -383,6 +437,7 @@ NODE_CLASS_MAPPINGS = {
     "Miaoshouai_Tagger": Tagger,
     "Miaoshouai_SaveTags": SaveTags,
     "Miaoshouai_Flux_CLIPTextEncode": FluxCLIPTextEncode,
+    "Miaoshouai_SD3_CLIPTextEncode": SD3CLIPTextEncode,
     "Miaoshouai_Caption_Analyzer": CaptionAnalyzer
 }
 
@@ -391,5 +446,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Miaoshouai_Tagger": "🐾MiaoshouAI Tagger",
     "Miaoshouai_SaveTags": "🐾MiaoshouAI Save Tags",
     "Miaoshouai_Flux_CLIPTextEncode": "🐾MiaoshouAI Flux Clip Text Encode",
+    "Miaoshouai_SD3_CLIPTextEncode": "🐾MiaoshouAI SD3 Clip Text Encode",
     "Miaoshouai_Caption_Analyzer": "🐾MiaoshouAI Caption Analyzer (Beta)"
 }
