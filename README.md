@@ -1,6 +1,6 @@
 # MiaoshouAI Tagger for ComfyUI
 
-[English](README.md) / [中文](README_CN.md)
+[English](README.md) / [中文](README_CN.md) / [日本語](README_JP.md)
 
 MiaoshouAI Tagger for ComfyUI is an advanced image captioning tool based on the Microsoft Florence-2 Model Fine-tuned to perfection. This tool offers highly accurate and contextually relevant image tagging for your projects.
 
