@@ -1,6 +1,6 @@
 # ComfyUI 的 MiaoshouAI Tagger
 
-[English](README.md) / [中文](README_CN.md)
+[English](README.md) / [中文](README_CN.md) / [日本語](README_JP.md)
 
 MiaoshouAI Tagger 是一个基于微软 Florence-2 模型的高级图像标注工具，经过精细调优。该工具为您的项目提供高精度和上下文相关的图像标注。
 
