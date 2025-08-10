@@ -1,4 +1,6 @@
 import os, sys
+import string
+import random
 from PIL import Image
 import torch
 from unittest.mock import patch
@@ -6,11 +8,11 @@ from transformers.dynamic_module_utils import get_imports
 import torchvision.transforms.functional as F
 from torchvision import transforms
 from transformers import AutoModelForCausalLM, AutoProcessor
+import transformers
 
 import comfy.model_management as mm
 from comfy.utils import ProgressBar
 import folder_paths
-import random
 
 def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
@@ -100,6 +102,7 @@ class Tagger:
             early_stopping=False,
             do_sample=do_sample,
             num_beams=num_beams,
+            use_cache=False,  # Disable cache to avoid cache layer issues
         )
         generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
         parsed_answer = processor.post_process_generation(
@@ -114,7 +117,8 @@ class Tagger:
         tag_contents = []
         pil_images = []
         tensor_images = []
-        attention = 'sdpa'
+        # Use eager attention for newer transformers to avoid cache issues
+        attention = 'eager' if transformers.__version__ >= '4.51.0' else 'sdpa'
         precision = 'fp16'
 
         device = mm.get_torch_device()
@@ -122,10 +126,14 @@ class Tagger:
         dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
 
         # Download model if it does not exist
-
-        hg_model = 'MiaoshouAI/Florence-2-base-PromptGen-v2.0'
-        if model == 'promptgen_large_v2.0':
-            hg_model = 'MiaoshouAI/Florence-2-large-PromptGen-v2.0'
+        model_mapping = {
+            'promptgen_base_v1.5': 'MiaoshouAI/Florence-2-base-PromptGen-v1.5',
+            'promptgen_large_v1.5': 'MiaoshouAI/Florence-2-large-PromptGen-v1.5',
+            'promptgen_base_v2.0': 'MiaoshouAI/Florence-2-base-PromptGen-v2.0',
+            'promptgen_large_v2.0': 'MiaoshouAI/Florence-2-large-PromptGen-v2.0'
+        }
+        
+        hg_model = model_mapping.get(model, 'MiaoshouAI/Florence-2-base-PromptGen-v2.0')
         model_name = hg_model.rsplit('/', 1)[-1]
         model_path = os.path.join(folder_paths.models_dir, "LLM", model_name)
         if not os.path.exists(model_path):
@@ -135,10 +143,22 @@ class Tagger:
                               local_dir=model_path,
                               local_dir_use_symlinks=False)
 
-        with patch("transformers.dynamic_module_utils.get_imports",
-                   fixed_get_imports):  # workaround for unnecessary flash_attn requirement
-            model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
-                                                         torch_dtype=dtype, trust_remote_code=True).to(device)
+        # Check transformers version and use appropriate loading method
+        print(f"Transformers version: {transformers.__version__}")
+        
+        if transformers.__version__ < '4.51.0':
+            # Use the old method for older transformers
+            with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
+                model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
+                                                             torch_dtype=dtype, trust_remote_code=True).to(device)
+        else:
+            # For transformers >= 4.51.0, use the custom modeling file that includes GenerationMixin
+            from .modeling_florence2 import Florence2ForConditionalGeneration
+            model = Florence2ForConditionalGeneration.from_pretrained(
+                model_path, 
+                attn_implementation=attention,
+                torch_dtype=dtype
+            ).to(device)
 
         # Load the processor
         processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
