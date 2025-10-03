@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>AI Studio — AI Development Company</title>
+  <meta name="description" content="AI Studio is a multi-purpose AI development company offering innovative solutions for businesses.">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0a2540;
+      --accent: #59e5a2;
+      --bg: #f7fafc;
+      --text: #222;
+    }
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px 0 20px;
+      text-align: center;
+    }
+    header {
+      margin-bottom: 36px;
+    }
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: -2px;
+      margin-bottom: 10px;
+    }
+    nav {
+      margin-bottom: 20px;
+    }
+    nav a {
+      color: var(--primary);
+      text-decoration: none;
+      margin: 0 15px;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: color 0.2s;
+    }
+    nav a:hover {
+      color: var(--accent);
+    }
+    .headline {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+    .subheadline {
+      font-size: 1.2rem;
+      margin-bottom: 32px;
+      color: #444;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      padding: 14px 36px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 2px 16px rgba(89,229,162,0.1);
+      transition: background 0.2s;
+    }
+    .cta-btn:hover {
+      background: #43c98a;
+    }
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 32px;
+      margin: 60px 0 40px 0;
+    }
+    .feature {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(10,37,64,0.06);
+      padding: 32px 24px;
+      max-width: 250px;
+      flex: 1 1 220px;
+      min-width: 200px;
+    }
+    .feature-icon {
+      font-size: 2.2rem;
+      margin-bottom: 14px;
+      color: var(--accent);
+    }
+    .feature-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .feature-desc {
+      font-size: 0.97rem;
+      color: #444;
+    }
+    footer {
+      margin: 40px 0 10px 0;
+      color: #555;
+      font-size: 0.97rem;
+    }
+    @media (max-width: 700px) {
+      .features { flex-direction: column; gap: 20px; }
+      .feature { max-width: unset; min-width: 0; }
+      .container { padding-top: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">AI Studio</div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
+    <main>
+      <div class="headline">Empowering Businesses with AI Solutions</div>
+      <div class="subheadline">
+        We build intelligent products and services using the latest in Artificial Intelligence.<br>
+        From automation to custom machine learning, our team delivers end-to-end solutions for your business.
+      </div>
+      <a href="#contact" class="cta-btn">Get a Free Consultation</a>
+      <section id="features" class="features">
+        <div class="feature">
+          <div class="feature-icon">🤖</div>
+          <div class="feature-title">Custom AI Development</div>
+          <div class="feature-desc">Tailored machine learning and AI models for your unique business needs.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🧠</div>
+          <div class="feature-title">Automation & Optimization</div>
+          <div class="feature-desc">Automate workflows, optimize operations, and boost efficiency with smart solutions.</div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🌐</div>
+          <div class="feature-title">AI Consulting</div>
+          <div class="feature-desc">Expert advice to help you integrate AI into your products, services, and strategy.</div>
+        </div>
+      </section>
+      <section id="contact">
+        <h2>Contact Us</h2>
+        <p>Ready to start your AI journey? Fill out the form and our team will get back to you soon.</p>
+        <form style="max-width:400px;margin:0 auto;text-align:left;">
+          <label>Name<br>
+            <input type="text" name="name" required style="width:100%;padding:10px;margin-bottom:15px;">
+          </label>
+          <label>Email<br>
+            <input type="email" name="email" required style="width:100%;padding:10px;margin-bottom:15px;">
+          </label>
+          <label>Message<br>
+            <textarea name="message" required rows="4" style="width:100%;padding:10px;margin-bottom:20px;"></textarea>
+          </label>
+          <button type="submit" class="cta-btn" style="width:100%;">Send Message</button>
+        </form>
+      </section>
+    </main>
+    <footer>
+      &copy; 2025 AI Studio. All rights reserved.
+    </footer>
+  </div>
+</body>
+</html>
