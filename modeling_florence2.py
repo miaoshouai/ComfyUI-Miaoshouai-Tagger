@@ -17,6 +17,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
+import copy
 import math
 import torch
 import torch.utils.checkpoint
@@ -1419,6 +1420,18 @@ class Florence2LanguagePreTrainedModel(PreTrainedModel):
     _supports_flash_attn_2 = True
     _supports_sdpa = True
 
+    @classmethod
+    def is_remote_code(cls):
+        # transformers>=5 runs initialize_weights() *after* from_pretrained has loaded the
+        # checkpoint, and only skips a module when it is flagged as initialized. The flag is
+        # set by the transformers.initialization helpers, which _init_weights below does not
+        # use -- it writes through .data in place, as transformers 4.x code does. Without
+        # this, every loaded weight is silently overwritten with a fresh random init.
+        # Returning True selects the code path that instead checks the flag transformers set
+        # on the parameters it just loaded, which is the correct test for this style of
+        # _init_weights.
+        return True
+
     def _init_weights(self, module):
         std = self.config.init_std
         if isinstance(module, nn.Linear):
@@ -1908,7 +1921,11 @@ class Florence2Decoder(Florence2LanguagePreTrainedModel):
 
 
 class Florence2LanguageModel(Florence2LanguagePreTrainedModel):
-    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight"]
+    # transformers>=5 expects a {target: source} mapping instead of a flat list
+    _tied_weights_keys = {
+        "encoder.embed_tokens.weight": "shared.weight",
+        "decoder.embed_tokens.weight": "shared.weight",
+    }
 
     def __init__(self, config: Florence2LanguageConfig):
         super().__init__(config)
@@ -2031,7 +2048,14 @@ class Florence2LanguageModel(Florence2LanguagePreTrainedModel):
 
 class Florence2LanguageForConditionalGeneration(Florence2LanguagePreTrainedModel, GenerationMixin):
     base_model_prefix = "model"
-    _tied_weights_keys = ["encoder.embed_tokens.weight", "decoder.embed_tokens.weight", "lm_head.weight"]
+    # transformers>=5 expects a {target: source} mapping instead of a flat list.
+    # lm_head is deliberately absent: the PromptGen checkpoints ship an lm_head that
+    # differs from shared in every row, and tying it (which overwrites lm_head with
+    # shared) makes <GENERATE_TAGS> emit prose instead of tags.
+    _tied_weights_keys = {
+        "model.encoder.embed_tokens.weight": "model.shared.weight",
+        "model.decoder.embed_tokens.weight": "model.shared.weight",
+    }
     _keys_to_ignore_on_load_missing = ["final_logits_bias"]
 
     def __init__(self, config: Florence2LanguageConfig):
@@ -2296,6 +2320,13 @@ class Florence2PreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _skip_keys_device_placement = "past_key_values"
 
+    @classmethod
+    def is_remote_code(cls):
+        # See Florence2LanguagePreTrainedModel.is_remote_code. This is the flag that
+        # initialize_weights() reads on the outermost model and passes down to every
+        # submodule, so it has to be set here too.
+        return True
+
     @property
     def _supports_flash_attn_2(self):
         """
@@ -2488,7 +2519,11 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
     FLORENCE2_START_DOCSTRING,
 )
 class Florence2ForConditionalGeneration(Florence2PreTrainedModel, GenerationMixin):
-    _tied_weights_keys = ["language_model.encoder.embed_tokens.weight", "language_model.decoder.embed_tokens.weight", "language_model.lm_head.weight"]
+    # See Florence2LanguageForConditionalGeneration for why lm_head is not tied here.
+    _tied_weights_keys = {
+        "language_model.model.encoder.embed_tokens.weight": "language_model.model.shared.weight",
+        "language_model.model.decoder.embed_tokens.weight": "language_model.model.shared.weight",
+    }
     def __init__(self, config: Florence2Config):
         super().__init__(config)
         assert config.vision_config.model_type == 'davit', 'only DaViT is supported for now'
@@ -2742,6 +2777,18 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel, GenerationMixi
             if pixel_values is not None:
                 image_features = self._encode_image(pixel_values)
                 inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+
+        # generation_config.json belongs to this model, but generation actually happens in
+        # language_model, which builds its own config from config.text_config. Under
+        # transformers 4.x that config still carried the generation parameters; v5 strips
+        # them out of PretrainedConfig, so no_repeat_ngram_size, forced_bos_token_id and
+        # friends would silently be lost. Fold the caller's kwargs into a copy of ours and
+        # pass that down -- callers still win, and generate() gets a single source of truth
+        # instead of a config plus loose overrides (which it warns about).
+        if "generation_config" not in kwargs:
+            generation_config = copy.deepcopy(self.generation_config)
+            kwargs = generation_config.update(**kwargs)
+            kwargs["generation_config"] = generation_config
 
         return self.language_model.generate(
             input_ids=None,
