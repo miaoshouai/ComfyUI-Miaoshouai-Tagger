@@ -5,6 +5,8 @@
 MiaoshouAI Tagger 是一个基于微软 Florence-2 模型的高级图像标注工具，经过精细调优。该工具为您的项目提供高精度和上下文相关的图像标注。
 
 ## 版本更新
+2026/07/31 支持 transformers 5.x。此前节点在加载时会抛出 `AttributeError: 'Florence2LanguageConfig' object has no attribute 'forced_bos_token_id'`；修复该错误后又暴露出四个问题，其中三个是静默的——模型加载时不报任何错误，却输出乱码、不断重复同一短语，或基于未缩放、未归一化的图像生成描述。详见 [英文说明](README.md#transformers-5x-compatibility)。transformers 4.x 的行为保持不变。</br>
+2025/12/16 支持 transformers 4.51+（该版本起 `PreTrainedModel` 不再提供 `generate()`）。Florence-2 的 modeling 与 configuration 文件已内置到本仓库（`modeling_florence2.py`、`configuration_florence2.py`）并修改为继承 `GenerationMixin`，因此模型改为本地加载，不再依赖 `trust_remote_code`。</br>
 2024/09/28 v1.4 版本更新支持[Florence-2-base-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v2.0) 和 [Florence-2-large-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v2.0)</br>
 2024/09/28 v1.31 修复部分用户碰到的[模型配置文件缺失](https://github.com/miaoshouai/ComfyUI-Miaoshouai-Tagger/issues/15)问题, 更新节点之后，删除models\LLM文件夹下面的模型，重新运行工作流模型会自动下载。或者你也可以手动从 [度盘](https://pan.baidu.com/s/1h8kLNmukfcUitM7mKRE89w?pwd=4xwc) 文件夹下载模型.</br>
 2024/09/07 v1.2 更新支持 [Florence-2-large-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v1.5), 为Tagger节点增加了一个随机widget，如果选择Always，Tagger将在每一次运行生成一套新的提示词。<br>

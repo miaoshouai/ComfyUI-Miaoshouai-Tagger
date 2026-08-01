@@ -1,4 +1,6 @@
 import os, sys
+import string
+import random
 from PIL import Image
 import torch
 from unittest.mock import patch
@@ -6,11 +8,13 @@ from transformers.dynamic_module_utils import get_imports
 import torchvision.transforms.functional as F
 from torchvision import transforms
 from transformers import AutoModelForCausalLM, AutoProcessor
+import transformers
+
+TRANSFORMERS_MAJOR = int(transformers.__version__.split('.')[0])
 
 import comfy.model_management as mm
 from comfy.utils import ProgressBar
 import folder_paths
-import random
 
 def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
@@ -22,6 +26,48 @@ def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
         print(f"No flash_attn import to remove")
         pass
     return imports
+
+
+def load_processor(model_path):
+    """Load the checkpoint's own Florence2Processor.
+
+    On transformers 5.x AutoProcessor cannot be used: it resolves the tokenizer through
+    AutoConfig, which executes the checkpoint's transformers-4.x configuration_florence2.py
+    (that file reads self.forced_bos_token_id, an attribute v5 moved off PretrainedConfig).
+    Build the processor from its parts instead, so AutoConfig is never involved, and shim
+    the two 4.x-isms in the checkpoint's processing_florence2.py.
+    """
+    if TRANSFORMERS_MAJOR < 5:
+        return AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+
+    from transformers import AutoImageProcessor, AutoTokenizer
+    from transformers.dynamic_module_utils import get_class_from_dynamic_module
+
+    processor_class = get_class_from_dynamic_module(
+        "processing_florence2.Florence2Processor", model_path)
+
+    # tokenizer_type short-circuits the AutoConfig lookup in AutoTokenizer.
+    tokenizer = AutoTokenizer.from_pretrained(model_path, tokenizer_type="bart")
+    # v5 dropped the additional_special_tokens attribute; the processor reads it to build
+    # the list of tokens to register. They are already in the vocab (added_tokens.json),
+    # so an empty list leaves the tokenizer unchanged.
+    if not hasattr(tokenizer, "additional_special_tokens"):
+        tokenizer.additional_special_tokens = []
+
+    image_processor = AutoImageProcessor.from_pretrained(model_path)
+    # Florence2Processor.__call__ forwards every preprocessing option to the image
+    # processor, passing None for the ones it was not given. Under 4.x None meant "use the
+    # value from preprocessor_config.json"; under v5 it means "off", which silently skips
+    # the resize to 768x768 and the normalization. Dropping the Nones restores 4.x behavior.
+    base_class = type(image_processor)
+
+    class NoneMeansDefault(base_class):
+        def __call__(self, *args, **kwargs):
+            return super().__call__(*args, **{k: v for k, v in kwargs.items() if v is not None})
+
+    image_processor.__class__ = NoneMeansDefault
+
+    return processor_class(image_processor=image_processor, tokenizer=tokenizer)
 
 
 class Tagger:
@@ -100,6 +146,7 @@ class Tagger:
             early_stopping=False,
             do_sample=do_sample,
             num_beams=num_beams,
+            use_cache=False,  # Disable cache to avoid cache layer issues            
         )
         generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
         parsed_answer = processor.post_process_generation(
@@ -114,7 +161,8 @@ class Tagger:
         tag_contents = []
         pil_images = []
         tensor_images = []
-        attention = 'sdpa'
+        # Use eager attention for newer transformers to avoid cache issues
+        attention = 'eager' if transformers.__version__ >= '4.51.0' else 'sdpa'
         precision = 'fp16'
 
         device = mm.get_torch_device()
@@ -135,13 +183,25 @@ class Tagger:
                               local_dir=model_path,
                               local_dir_use_symlinks=False)
 
-        with patch("transformers.dynamic_module_utils.get_imports",
-                   fixed_get_imports):  # workaround for unnecessary flash_attn requirement
-            model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
-                                                         torch_dtype=dtype, trust_remote_code=True).to(device)
+        # Check transformers version and use appropriate loading method
+        print(f"Transformers version: {transformers.__version__}")
+
+        if transformers.__version__ < '4.51.0':
+            # Use the old method for older transformers
+            with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
+                model = AutoModelForCausalLM.from_pretrained(model_path, attn_implementation=attention, device_map=device,
+                                                             torch_dtype=dtype, trust_remote_code=True).to(device)
+        else:
+            # For transformers >= 4.51.0, use the custom modeling file that includes GenerationMixin
+            from .modeling_florence2 import Florence2ForConditionalGeneration
+            model = Florence2ForConditionalGeneration.from_pretrained(
+                model_path, 
+                attn_implementation=attention,
+                torch_dtype=dtype
+            ).to(device)
 
         # Load the processor
-        processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+        processor = load_processor(model_path)
 
         if images is None:
             for filename in os.listdir(folder_path):

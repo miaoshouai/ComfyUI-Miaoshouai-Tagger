@@ -5,6 +5,8 @@
 MiaoshouAI Tagger for ComfyUIは、MicrosoftのFlorence-2モデルに基づいた高度な画像キャプショニングツールで、完璧にファインチューニングされています。このツールは、プロジェクトに対して非常に正確で文脈に関連した画像タグ付けを提供します。
 
 ## 更新情報
+2026/07/31 transformers 5.x に対応。従来はロード時に `AttributeError: 'Florence2LanguageConfig' object has no attribute 'forced_bos_token_id'` で失敗していました。これを修正した結果さらに4件の不具合が判明し、うち3件は無警告で発生するもの——エラーも警告も出ないまま、意味不明な文字列を出力する、同じ語句を延々と繰り返す、あるいはリサイズも正規化もされていない画像からキャプションを生成する、という挙動でした。詳細は[英語版の説明](README.md#transformers-5x-compatibility)を参照してください。transformers 4.x の動作は変更ありません。</br>
+2025/12/16 transformers 4.51+ に対応（このバージョン以降 `PreTrainedModel` は `generate()` を提供しません）。Florence-2 の modeling / configuration ファイルを本リポジトリに同梱し（`modeling_florence2.py`、`configuration_florence2.py`）、`GenerationMixin` を継承するよう修正したため、`trust_remote_code` ではなくローカルからモデルを読み込みます。</br>
 2024/11/05 v1.4 新リリースで[Florence-2-base-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-base-PromptGen-v2.0)と[Florence-2-large-PromptGen-v2.0](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v2.0)をサポート</br>
 2024/09/28 v1.31 [この問題](https://github.com/miaoshouai/ComfyUI-Miaoshouai-Tagger/issues/15)に関連する設定エラーを修正、既存のモデルをmodels\LLMフォルダから削除し、再実行してください。新しい設定が自動的にダウンロードされます。または、[百度ドライブ](https://pan.baidu.com/s/1h8kLNmukfcUitM7mKRE89w?pwd=4xwc)フォルダからモデルをダウンロードできます。</br>
 2024/09/07 v1.2 [Florence-2-large-PromptGen-v1.5](https://huggingface.co/MiaoshouAI/Florence-2-large-PromptGen-v1.5)をサポートするように更新、Taggerノードにランダムプロンプトウィジェットを追加し、毎回異なるプロンプトを取得したい場合は「常に」に切り替えます。<br>
